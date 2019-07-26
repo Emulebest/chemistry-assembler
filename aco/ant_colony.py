@@ -1,9 +1,11 @@
 import random as rn
+from typing import List, Tuple
+
 import numpy as np
 from numpy.random import choice as np_choice
 
 
-class AntColony:
+class BinaryFeatureSelectionAntColony:
 
     def __init__(self, distances, n_ants, n_best, n_iterations, decay, alpha=1, beta=1):
         """
@@ -20,7 +22,7 @@ class AntColony:
             ant_colony = AntColony(german_distances, 100, 20, 2000, 0.95, alpha=1, beta=2)
         """
         self.distances = distances
-        self.pheromone = np.ones(self.distances.shape) / len(distances)
+        self.pheromone = np.ones((2, 2))
         self.all_inds = range(len(distances))
         self.n_ants = n_ants
         self.n_best = n_best
@@ -28,58 +30,59 @@ class AntColony:
         self.decay = decay
         self.alpha = alpha
         self.beta = beta
+        self.times_taken = np.ones((2, 2))
 
     def run(self):
-        shortest_path = None
         all_time_shortest_path = ("placeholder", np.inf)
         for i in range(self.n_iterations):
             all_paths = self.gen_all_paths()
-            self.spread_pheronome(all_paths, self.n_best, shortest_path=shortest_path)
+            self.spread_pheronome(all_paths, self.n_best)
             shortest_path = min(all_paths, key=lambda x: x[1])
             print(shortest_path)
             if shortest_path[1] < all_time_shortest_path[1]:
                 all_time_shortest_path = shortest_path
-            self.pheromone *= self.decay
         return all_time_shortest_path
 
-    def spread_pheronome(self, all_paths, n_best, shortest_path):
-        sorted_paths = sorted(all_paths, key=lambda x: x[1])
-        for path, dist in sorted_paths[:n_best]:
-            for move in path:
-                self.pheromone[move] += 1.0 / self.distances[move]
+    def calculate_feature_amount(self, path: List[Tuple[int, int]]) -> int:
+        return len(list(filter(lambda x: x == 1, map(lambda x: x[1], path))))
 
-    def gen_path_dist(self, path):
-        total_dist = 0
-        for ele in path:
-            total_dist += self.distances[ele]
-        return total_dist
+    def spread_pheronome(self, all_paths, n_best):
+        heuristric_sum = 0
+        for path, score in all_paths:
+            count = self.calculate_feature_amount(path)
+            heuristric_sum += score / path
+        total_sum = self.decay * heuristric_sum
+        for i in range(len(self.pheromone[0]) - 1):
+            self.pheromone[0][i] = (1 - self.decay) * self.pheromone[0][i] + total_sum
+            self.pheromone[1][i] = (1 - self.decay) * self.pheromone[1][i] + total_sum
 
     def gen_all_paths(self):
         all_paths = []
         for i in range(self.n_ants):
-            path = self.gen_path(0)
-            all_paths.append((path, self.gen_path_dist(path)))
+            path = self.gen_path()
+            all_paths.append((path, self.calculate_svm(path)))
         return all_paths
 
-    def gen_path(self, start):
+    def gen_path(self):
         path = []
-        visited = set()
-        visited.add(start)
-        prev = start
-        for i in range(len(self.distances) - 1):
-            move = self.pick_move(self.pheromone[prev], self.distances[prev], visited)
-            path.append((prev, move))
-            prev = move
-            visited.add(move)
-        path.append((prev, start))  # going back to where we started
+        for i in range(len(self.distances[0]) - 1):
+            move: int = self.pick_move(self.pheromone[0][i], self.pheromone[1][i], i)
+            self.times_taken[move][i] += 1
+            path.append((i, move))
         return path
 
-    def pick_move(self, pheromone, dist, visited):
-        pheromone = np.copy(pheromone)
-        pheromone[list(visited)] = 0
+    def pick_move(self, pheromone_include, pheromone_exclude, i):
 
-        row = pheromone ** self.alpha * ((1.0 / dist) ** self.beta)
+        excluded = pheromone_exclude * self.times_taken[0][i]
+        included = pheromone_include * self.times_taken[1][i]
 
-        norm_row = row / row.sum()
-        move = np_choice(self.all_inds, 1, p=norm_row)[0]
+        move = np_choice([0, 1], 1, p=[excluded, included])[0]
         return move
+
+    def calculate_svm(self, path) -> int:
+        """
+        is
+        :param path:
+        :return: int
+        """
+        return 10

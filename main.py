@@ -32,9 +32,9 @@ import numpy as np
 #
 # print_model = model.summary()
 # print(print_model)
-X = np.array([[1, 100], [2, 107], [3, 112], [4, 108]])
+X = np.array([[1], [2], [3], [4]])
 featureB = np.array([[100], [107], [112], [108]])
-y = np.array([[25], [444], [66], [81]])
+y = np.array([[11], [19], [31], [41]])
 
 regr = linear_model.LinearRegression()
 regr.fit(X, y)

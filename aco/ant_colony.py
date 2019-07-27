@@ -31,33 +31,43 @@ class BinaryFeatureSelectionAntColony:
         self.alpha = alpha
         self.times_taken = np.ones((2, 2))
         self.data_set = data_set
+        self.current_iteration = 1
 
     def run(self):
         all_time_shortest_path = ("placeholder", 0)
         for i in range(self.n_iterations):
             all_paths = self.gen_all_paths()
             self.spread_pheronome(all_paths)
-            shortest_path = min(all_paths, key=lambda x: x[1])
+            shortest_path = max(all_paths, key=lambda x: x[1])
             print(shortest_path)
             if shortest_path[1] > all_time_shortest_path[1]:
                 all_time_shortest_path = shortest_path
+            self.current_iteration += 1
         return all_time_shortest_path
 
     def calculate_feature_amount(self, path: List[Tuple[int, int]]) -> int:
         return len(list(filter(lambda x: x == 1, map(lambda x: x[1], path))))
 
     def spread_pheronome(self, all_paths):
-        heuristric_sum = 0
+        # heuristric_sum = 0
+        # for path, score in all_paths:
+        #     count = self.calculate_feature_amount(path)
+        #     try:
+        #         heuristric_sum += score / count
+        #     except ZeroDivisionError:
+        #         pass
+        # total_sum = (1 - self.decay) * heuristric_sum
         for path, score in all_paths:
             count = self.calculate_feature_amount(path)
-            try:
-                heuristric_sum += score / count
-            except ZeroDivisionError:
-                pass
-        total_sum = self.decay * heuristric_sum
-        for i in range(len(self.pheromone[0])):
-            self.pheromone[0][i] = (1 - self.decay) * self.pheromone[0][i] + total_sum
-            self.pheromone[1][i] = (1 - self.decay) * self.pheromone[1][i] + total_sum
+            for i, chosen in path:
+                if count == 0:
+                    continue
+                self.pheromone[chosen][i] = (1 - self.decay) * self.pheromone[chosen][i] + (score / count) * self.alpha
+                self.times_taken[chosen][i] += 1
+        #
+        # for i in range(len(self.pheromone[0])):
+        #     self.pheromone[0][i] = (1 - self.decay) * self.pheromone[0][i] + total_sum
+        #     self.pheromone[1][i] = (1 - self.decay) * self.pheromone[1][i] + total_sum
 
     def gen_all_paths(self):
         all_paths = []
@@ -70,14 +80,13 @@ class BinaryFeatureSelectionAntColony:
         path = []
         for i in range(len(self.construction_matrix[0])):
             move: int = self.pick_move(self.pheromone[0][i], self.pheromone[1][i], i)
-            self.times_taken[move][i] += 1
             path.append((i, move))
         return path
 
-    def pick_move(self, pheromone_include, pheromone_exclude, i):
+    def pick_move(self, pheromone_exclude, pheromone_include, i):
 
-        excluded = pheromone_exclude * self.times_taken[0][i]
-        included = pheromone_include * self.times_taken[1][i]
+        excluded = pheromone_exclude * (self.times_taken[0][i] / (self.n_ants * self.current_iteration))
+        included = pheromone_include * (self.times_taken[1][i] / (self.n_ants * self.current_iteration))
 
         rows = np.array([excluded, included]) / (excluded + included)
 

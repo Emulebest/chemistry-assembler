@@ -8,7 +8,7 @@ from sklearn import linear_model
 
 class BinaryFeatureSelectionAntColony:
 
-    def __init__(self, construction_matrix, n_ants, n_iterations, decay, data_set, alpha=1):
+    def __init__(self, n_ants, n_iterations, decay, data_set, score_weight=1, count_weight=1):
         """
         Args:
             construction_matrix (2D numpy.array): Square matrix of distances. Diagonal is assumed to be np.inf.
@@ -22,16 +22,18 @@ class BinaryFeatureSelectionAntColony:
         Example:
             ant_colony = AntColony(german_distances, 100, 20, 2000, 0.95, alpha=1, beta=2)
         """
-        self.construction_matrix = construction_matrix
-        self.pheromone = np.ones((2, 2))
-        self.all_inds = range(len(construction_matrix))
         self.n_ants = n_ants
         self.n_iterations = n_iterations
         self.decay = decay
-        self.alpha = alpha
-        self.times_taken = np.ones((2, 2))
+        self.score_weight = score_weight
+        self.count_weight = count_weight
         self.data_set = data_set
         self.current_iteration = 1
+        self.times_taken = np.ones((2, len(self.data_set) - 1))
+        self.pheromone = np.ones((2, len(self.data_set) - 1))
+        self.construction_matrix = np.zeros([2, len(self.data_set) - 1])
+        for i in range(len(self.construction_matrix[1])):
+            self.construction_matrix[1][i] = 1
 
     def run(self):
         all_time_shortest_path = ("placeholder", 0)
@@ -40,8 +42,11 @@ class BinaryFeatureSelectionAntColony:
             self.spread_pheronome(all_paths)
             shortest_path = max(all_paths, key=lambda x: x[1])
             print(shortest_path)
-            if shortest_path[1] > all_time_shortest_path[1]:
+            if shortest_path[1] > all_time_shortest_path[1] or (
+                    shortest_path[1] == all_time_shortest_path[1] and self.calculate_feature_amount(
+                    shortest_path[0]) < self.calculate_feature_amount(all_time_shortest_path[0])):
                 all_time_shortest_path = shortest_path
+            print(self.current_iteration)
             self.current_iteration += 1
         return all_time_shortest_path
 
@@ -62,7 +67,8 @@ class BinaryFeatureSelectionAntColony:
             for i, chosen in path:
                 if count == 0:
                     continue
-                self.pheromone[chosen][i] = (1 - self.decay) * self.pheromone[chosen][i] + (score / count) * self.alpha
+                self.pheromone[chosen][i] = (1 - self.decay) * self.pheromone[chosen][i] + (
+                        score / count ** self.count_weight) * self.score_weight
                 self.times_taken[chosen][i] += 1
         #
         # for i in range(len(self.pheromone[0])):

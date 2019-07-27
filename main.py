@@ -32,11 +32,22 @@ import numpy as np
 #
 # print_model = model.summary()
 # print(print_model)
-X = np.array([[1], [2], [3], [4]])
-featureB = np.array([[100], [107], [112], [108]])
-y = np.array([[11], [19], [31], [41]])
-
+start = 1
+X = np.empty((50, 1))
+for i in range(len(X)):
+    X[i][0] = start
+    start += 1
+B = np.random.randint(10000, size=(50, 1))
+y = np.empty((50, 1))
+start = 1
+for i in range(len(y)):
+    y[i][0] = start * 10 + 15
+    start += 1
+F = np.empty((50, 2))
+for i in range(len(F)):
+    F[i][0] = X[i][0]
+    F[i][1] = B[i][0]
 regr = linear_model.LinearRegression()
-regr.fit(X, y)
-print(regr.score(X, y))
+regr.fit(F, y)
+print(regr.score(F, y))
 

@@ -9,16 +9,19 @@ from aco.ant_colony import BinaryFeatureSelectionAntColony
 class MyTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.featureA = np.array([[1], [2], [3], [4]])
-        self.featureB = np.array([[100], [107], [112], [108]])
-        self.result = np.array([[11], [19], [31], [41]])
+        self.featureA = np.random.randint(10000, size=(200, 1))
+        self.featureB = np.random.randint(10000, size=(200, 1))
+        self.featureC = np.random.randint(10000, size=(200, 1))
+        self.featureD = np.random.randint(10000, size=(200, 1))
+        self.featureE = np.random.randint(10000, size=(200, 1))
+        self.featureF = np.random.randint(10000, size=(200, 1))
+        self.result = np.random.randint(10000, size=(200, 1))
 
     def test_ACO(self):
-        construction_matrix: List[List[int]] = [[0, 0],
-                                                [1, 1]]
-        data_set = [self.featureA, self.featureB, self.result]
-        ant_colony = BinaryFeatureSelectionAntColony(construction_matrix, 4, 2, 0.05, data_set, 2)
+        data_set = [self.featureA, self.featureB, self.featureC, self.featureD, self.featureE, self.featureF, self.result]
+        ant_colony = BinaryFeatureSelectionAntColony(2, 4, 0.05, data_set, 2, 10)
         result_path = ant_colony.run()
+        print(f"Result {result_path}")
         self.assertGreaterEqual(result_path[1], 0.99)
 
 

@@ -2,25 +2,23 @@ from typing import List, Tuple
 
 import numpy as np
 from numpy.random import choice as np_choice
+from pandas import DataFrame
 from sklearn import linear_model
 
 
 class BinaryFeatureSelectionAntColony:
 
-    def __init__(self, n_ants: int, n_iterations: int, decay: float, data_set: List[np.ndarray], score_weight=1,
+    def __init__(self, n_ants: int, n_iterations: int, decay: float, data_set: DataFrame, score_weight=1,
                  count_weight=1):
         """
         Args:
-            construction_matrix (2D numpy.array): Square matrix of distances. Diagonal is assumed to be np.inf.
+            data_set (DataFrame): DataFrame representing input set of features, last column are Y values
             n_ants (int): Number of ants running per iteration
             n_best (int): Number of best ants who deposit pheromone
             n_iteration (int): Number of iterations
             decay (float): Rate it which pheromone decays. The pheromone value is multiplied by decay, so 0.95 will lead to decay, 0.5 to much faster decay.
-            alpha (int or float): exponenet on pheromone, higher alpha gives pheromone more weight. Default=1
-            beta (int or float): exponent on distance, higher beta give distance more weight. Default=1
-
-        Example:
-            ant_colony = AntColony(german_distances, 100, 20, 2000, 0.95, alpha=1, beta=2)
+            count_weight (int or float): exponent on count of features
+            score_weight (int or float): exponent on score by linear reg
         """
         self.n_ants = n_ants
         self.n_iterations = n_iterations
@@ -29,9 +27,9 @@ class BinaryFeatureSelectionAntColony:
         self.count_weight = count_weight
         self.data_set = data_set
         self.current_iteration: int = 1
-        self.times_taken: np.ndarray = np.ones((2, len(self.data_set) - 1))
-        self.pheromone: np.ndarray = np.ones((2, len(self.data_set) - 1))
-        self.construction_matrix: np.ndarray = np.zeros([2, len(self.data_set) - 1])
+        self.times_taken: np.ndarray = np.ones((2, len(self.data_set.columns) - 1))
+        self.pheromone: np.ndarray = np.ones((2, len(self.data_set.columns) - 1))
+        self.construction_matrix: np.ndarray = np.zeros([2, len(self.data_set.columns) - 1])
         for i in range(len(self.construction_matrix[1])):
             self.construction_matrix[1][i] = 1
 
@@ -93,12 +91,13 @@ class BinaryFeatureSelectionAntColony:
             if chosen:
                 chosen_features.append(i)
         xs = []
-        for i in range(len(self.data_set[0])):
+        for i in range(len(self.data_set.iloc[:, 0])):
             temp = []
             for f_id in chosen_features:
-                temp.append(self.data_set[f_id][i][0])
+                temp.append(self.data_set.iloc[i, f_id])
             xs.append(temp)
-        ys = self.data_set[len(self.data_set) - 1]
+        xs = np.asarray(xs)
+        ys = self.data_set.iloc[:, len(self.data_set.iloc[0, :]) - 1].values
         regr = linear_model.LinearRegression()
         try:
             regr.fit(xs, ys)

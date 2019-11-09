@@ -4,6 +4,7 @@ import numpy as np
 from numpy.random import choice as np_choice
 from pandas import DataFrame
 from sklearn import linear_model
+import math
 
 
 class BinaryFeatureSelectionAntColony:
@@ -57,6 +58,7 @@ class BinaryFeatureSelectionAntColony:
             for i, chosen in path:
                 if count == 0:
                     continue
+                # TODO: what to do with negative scores?
                 self.pheromone[chosen][i] = (1 - self.decay) * self.pheromone[chosen][i] + (
                         score / count ** self.count_weight) * self.score_weight
                 self.times_taken[chosen][i] += 1
@@ -71,6 +73,8 @@ class BinaryFeatureSelectionAntColony:
     def gen_path(self) -> List[Tuple[int, int]]:
         path = []
         for i in range(len(self.construction_matrix[0])):
+            if self.pheromone[0][i] < 0 or self.pheromone[1][i] < 0:
+                print(self.pheromone[0][i], self.pheromone[1][i])
             move: int = self.pick_move(self.pheromone[0][i], self.pheromone[1][i], i)
             path.append((i, move))
         return path
@@ -90,18 +94,26 @@ class BinaryFeatureSelectionAntColony:
         for i, chosen in path:
             if chosen:
                 chosen_features.append(i)
-        xs = []
+        xs_train = []
+        xs_test = []
+        ds_length = len(self.data_set)
+        mid = math.floor(ds_length / 2)
         for i in range(len(self.data_set.iloc[:, 0])):
             temp = []
             for f_id in chosen_features:
                 temp.append(self.data_set.iloc[i, f_id])
-            xs.append(temp)
-        xs = np.asarray(xs)
-        ys = self.data_set.iloc[:, len(self.data_set.iloc[0, :]) - 1].values
+            if i < mid:
+                xs_train.append(temp)
+            else:
+                xs_test.append(temp)
+        xs_train = np.asarray(xs_train)
+        xs_test = np.asarray(xs_test)
+        ys_train = self.data_set.iloc[:mid, len(self.data_set.iloc[0, :]) - 1].values
+        ys_test = self.data_set.iloc[mid:, len(self.data_set.iloc[0, :]) - 1].values
         regr = linear_model.LinearRegression()
         try:
-            regr.fit(xs, ys)
-            return regr.score(xs, ys)
+            regr.fit(xs_train, ys_train)
+            return regr.score(xs_test, ys_test)
         except Exception as e:
             print(e)
             return 0
